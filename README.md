@@ -103,6 +103,7 @@ Is-It-You/
 |   |   `-- base_friend.jpg
 |   |-- utils/
 |   |   |-- archive_extractor.py    # Unpackaging for ZIP, 7Z, and RAR archives
+|   |   |-- firebase_auth.py        # Token verification and email verification guard
 |   |   `-- sample_demo_loader.py   # Seed dataset generator for immediate evaluation
 |   |-- main.py                     # FastAPI routes and middleware
 |   |-- requirements.txt            # Python dependencies
@@ -208,14 +209,16 @@ NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
 
 #### Firestore Security Rules
 
-Configure the following Firestore security rules to ensure user isolation:
+Configure the following Firestore security rules to ensure strict user isolation and prevent unauthorized unverified account access:
 
 ```javascript
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /users/{userId}/profiles/{profileId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if request.auth != null 
+                         && request.auth.uid == userId 
+                         && request.auth.token.email_verified == true;
     }
   }
 }
@@ -348,8 +351,14 @@ npm start
 5. Toggle HUD visualization layers using the controls beneath the image to view individual geometric components (Bounding Box, Keypoints, Wireframe Mesh, Anatomical Contours, or Telemetry).
 6. Inspect the right-hand telemetry sidebar for calibrated metrics including cosine similarity, confidence score, Euclidean distance, detector probability, and head orientation angles.
 
-## Security and Privacy Considerations
+## Security and Anti-Evasion Considerations
 
-- Local Data Persistence: Biometric gallery profiles and embedding centroids are stored locally on disk (`backend/data/profiles.json`). No external biometric telemetry is transmitted to third-party endpoints.
-- Reversible Data Storage: Enrolled facial representations are stored as irreversible 512-dimensional vector centroids and low-resolution thumbnails; raw source images are not retained in persistent storage after enrollment processing.
-- Input Sanitation: File extension and MIME validation are enforced on all file ingestion routes to prevent unauthorized file processing.
+- Mandatory Email Verification: Account registration enforces automatic verification email dispatch. Access to personal biometric profile vaults and matching engines remains locked until email verification is confirmed.
+- Multi-Tier Anti-Evasion Protections:
+  - Client-Side: Reactive UI lock screen prevents unverified sessions from loading enrollment or verification consoles.
+  - Rate Limiting: 60-second cooldown timer prevents email flood attacks and mail service quota exhaustion.
+  - Cloud Database Security: Cloud Firestore security rules enforce `request.auth.token.email_verified == true`. Direct SDK or REST tampering cannot read or write biometric profiles without a cryptographically verified token.
+  - Backend API Verification: FastAPI biometric endpoints (`/api/enroll`, `/api/identify`) validate Google x509 cryptographic certificate signatures, token expiration, and verify `claims["email_verified"] is True`. Direct endpoint evasion attempts without verified authorization are rejected with HTTP 401/403.
+- User-Scoped Cloud Persistence: Enrolled friend profiles and 512D neural centroids are persisted exclusively in personal Firebase Firestore vaults (`users/{uid}/profiles/{profileId}`). Local storage files are never committed or exposed across sessions.
+- Irreversible Biometric Vector Storage: Enrolled facial representations are stored as irreversible 512-dimensional vector centroids and low-resolution thumbnails; raw source images are discarded after processing.
+- Input Sanitation: File extension and MIME validation are enforced on all file ingestion routes to prevent unauthorized file execution.

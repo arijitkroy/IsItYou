@@ -2,13 +2,14 @@ import io
 import os
 import shutil
 from typing import List, Optional
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from PIL import Image
 
 from backend.models.biometric_engine import BiometricEngine
 from backend.utils.archive_extractor import extract_images_from_archive, is_image_extension
+from backend.utils.firebase_auth import get_current_verified_user
 
 app = FastAPI(
     title="IsItYou? Biometric Face Identification API",
@@ -67,7 +68,8 @@ def delete_profile(profile_id: str):
 @app.post("/api/enroll")
 async def enroll_friend(
     name: str = Form(...),
-    files: List[UploadFile] = File(...)
+    files: List[UploadFile] = File(...),
+    auth_user: Optional[dict] = Depends(get_current_verified_user)
 ):
     if not name or not name.strip():
         raise HTTPException(status_code=400, detail="Friend name is required.")
@@ -118,7 +120,8 @@ async def enroll_friend(
 async def identify_face(
     file: UploadFile = File(...),
     profile_id: Optional[str] = Form(None),
-    profile_data: Optional[str] = Form(None)
+    profile_data: Optional[str] = Form(None),
+    auth_user: Optional[dict] = Depends(get_current_verified_user)
 ):
     filename = file.filename or ""
     if not is_image_extension(filename) and not file.content_type.startswith("image/"):

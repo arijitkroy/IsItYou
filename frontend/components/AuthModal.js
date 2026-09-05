@@ -23,10 +23,13 @@ export default function AuthModal({ isOpen, onClose, initialMode = "login" }) {
   const [successMessage, setSuccessMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const [signupSuccessEmail, setSignupSuccessEmail] = useState(null);
+
   React.useEffect(() => {
     if (isOpen && initialMode) {
       setActiveMode(initialMode);
       setErrorMessage("");
+      setSignupSuccessEmail(null);
     }
   }, [isOpen, initialMode]);
 
@@ -60,7 +63,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = "login" }) {
           throw new Error("Password must be at least 6 characters.");
         }
         await signup(email, password);
-        onClose();
+        setSignupSuccessEmail(email);
       }
     } catch (err) {
       let msg = err.message || "Authentication failed.";
@@ -203,7 +206,48 @@ export default function AuthModal({ isOpen, onClose, initialMode = "login" }) {
             </div>
           )}
 
-          {activeMode === "config" ? (
+          {signupSuccessEmail ? (
+            <div style={{ textAlign: "center", padding: "12px 0" }}>
+              <div style={{
+                width: "48px",
+                height: "48px",
+                borderRadius: "50%",
+                background: "rgba(16, 185, 129, 0.12)",
+                border: "1px solid rgba(16, 185, 129, 0.3)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                margin: "0 auto 16px",
+                color: "var(--accent-emerald)"
+              }}>
+                <Check size={22} />
+              </div>
+              <h4 style={{ fontSize: "1.05rem", fontWeight: 700, color: "#f8fafc", marginBottom: "8px" }}>
+                Verification Link Dispatched
+              </h4>
+              <p style={{ fontSize: "0.82rem", color: "var(--text-secondary)", lineHeight: 1.5, marginBottom: "20px" }}>
+                An authentication confirmation link was sent to <strong>{signupSuccessEmail}</strong>. You must verify your email before accessing the biometric identification console.
+              </p>
+              <button
+                onClick={() => {
+                  setSignupSuccessEmail(null);
+                  onClose();
+                }}
+                style={{
+                  width: "100%",
+                  padding: "10px 16px",
+                  borderRadius: "4px",
+                  background: "var(--accent-emerald)",
+                  color: "#022c22",
+                  fontWeight: 600,
+                  fontSize: "0.84rem",
+                  fontFamily: "var(--font-mono)"
+                }}
+              >
+                Proceed to Verification Console
+              </button>
+            </div>
+          ) : activeMode === "config" ? (
             <form onSubmit={handleSaveConfig}>
               <p style={{ fontSize: "0.78rem", color: "var(--text-secondary)", marginBottom: "16px" }}>
                 Enter your Firebase Web App credentials or define them in <code>frontend/.env.local</code>.

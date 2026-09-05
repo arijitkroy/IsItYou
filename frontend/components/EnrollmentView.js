@@ -10,6 +10,7 @@ import {
   Layers, 
   Image as ImageIcon 
 } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
 
 export default function EnrollmentView({
   profiles,
@@ -18,6 +19,7 @@ export default function EnrollmentView({
   activeProfileId,
   setActiveProfileId,
 }) {
+  const { user } = useAuth();
   const [friendName, setFriendName] = useState("");
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [uploadMode, setUploadMode] = useState("files");
@@ -63,8 +65,17 @@ export default function EnrollmentView({
     });
 
     try {
+      const headers = {};
+      if (user) {
+        try {
+          const idToken = await user.getIdToken();
+          if (idToken) headers["Authorization"] = `Bearer ${idToken}`;
+        } catch (tokErr) {}
+      }
+
       const response = await fetch("/api/enroll", {
         method: "POST",
+        headers,
         body: formData,
       });
 

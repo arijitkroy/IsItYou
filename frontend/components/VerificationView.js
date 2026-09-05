@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import HudControls from "./HudControls";
 import HudCanvas from "./HudCanvas";
+import { useAuth } from "../context/AuthContext";
 
 export default function VerificationView({
   profiles,
@@ -21,6 +22,7 @@ export default function VerificationView({
   setActiveProfileId,
   onNavigateToEnroll,
 }) {
+  const { user } = useAuth();
   const [imageSrc, setImageSrc] = useState(null);
   const [detectionData, setDetectionData] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -62,8 +64,17 @@ export default function VerificationView({
     }
 
     try {
+      const headers = {};
+      if (user) {
+        try {
+          const idToken = await user.getIdToken();
+          if (idToken) headers["Authorization"] = `Bearer ${idToken}`;
+        } catch (tokErr) {}
+      }
+
       const resp = await fetch("/api/identify", {
         method: "POST",
+        headers,
         body: formData,
       });
       const data = await resp.json();

@@ -3,16 +3,25 @@ import {
   doc, 
   setDoc, 
   getDocs, 
-  deleteDoc, 
-  query, 
-  orderBy 
+  deleteDoc 
 } from "firebase/firestore";
-import { db } from "./firebase";
+import { db, auth } from "./firebase";
+
+const assertVerifiedAuth = () => {
+  if (!auth || !auth.currentUser) {
+    throw new Error("Authentication required to access biometric database.");
+  }
+  if (!auth.currentUser.emailVerified) {
+    throw new Error("Access denied: Verified email required to perform biometric database operations.");
+  }
+};
 
 export const saveUserProfile = async (userId, profileData) => {
   if (!db || !userId || !profileData || !profileData.id) {
     throw new Error("Firestore is not initialized or user is unauthenticated.");
   }
+
+  assertVerifiedAuth();
 
   const profileRef = doc(db, "users", userId, "profiles", profileData.id);
   const dataToSave = {
@@ -27,6 +36,12 @@ export const saveUserProfile = async (userId, profileData) => {
 
 export const getUserProfiles = async (userId) => {
   if (!db || !userId) return [];
+
+  try {
+    assertVerifiedAuth();
+  } catch (authErr) {
+    return [];
+  }
 
   try {
     const profilesCol = collection(db, "users", userId, "profiles");
@@ -44,6 +59,8 @@ export const getUserProfiles = async (userId) => {
 
 export const deleteUserProfile = async (userId, profileId) => {
   if (!db || !userId || !profileId) return false;
+
+  assertVerifiedAuth();
 
   try {
     const profileRef = doc(db, "users", userId, "profiles", profileId);

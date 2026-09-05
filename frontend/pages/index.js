@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { Mail, RefreshCw } from "lucide-react";
 import Navbar from "../components/Navbar";
 import VerificationView from "../components/VerificationView";
 import EnrollmentView from "../components/EnrollmentView";
@@ -7,13 +8,28 @@ import { useAuth } from "../context/AuthContext";
 import { getUserProfiles, saveUserProfile, deleteUserProfile } from "../lib/firestoreService";
 
 export default function Home() {
-  const { user, loading } = useAuth();
+  const { user, isEmailVerified, loading, reloadUser, sendVerificationEmail, logout } = useAuth();
   const [activeTab, setActiveTab] = useState("verify");
   const [profiles, setProfiles] = useState([]);
   const [activeProfileId, setActiveProfileId] = useState(null);
   const [backendStatus, setBackendStatus] = useState({ online: false, device: "CPU" });
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalInitialMode, setAuthModalInitialMode] = useState("login");
+  
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [isCheckingVerification, setIsCheckingVerification] = useState(false);
+  const [isResending, setIsResending] = useState(false);
+  const [statusNotice, setStatusNotice] = useState(null);
+
+  useEffect(() => {
+    let timer;
+    if (resendCooldown > 0) {
+      timer = setInterval(() => {
+        setResendCooldown((prev) => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
 
   const openAuth = (mode = "login") => {
     setAuthModalInitialMode(mode);
@@ -21,7 +37,7 @@ export default function Home() {
   };
 
   const fetchProfiles = async () => {
-    if (!user) {
+    if (!user || !isEmailVerified) {
       setProfiles([]);
       setActiveProfileId(null);
       return;
@@ -64,10 +80,57 @@ export default function Home() {
       fetchHealth();
     }, 12000);
     return () => clearInterval(interval);
-  }, [user]);
+  }, [user, isEmailVerified]);
+
+  const handleCheckVerification = async () => {
+    setIsCheckingVerification(true);
+    setStatusNotice(null);
+    try {
+      const verified = await reloadUser();
+      if (verified) {
+        setStatusNotice({
+          type: "success",
+          message: "Email address successfully verified. Biometric vault unlocked."
+        });
+      } else {
+        setStatusNotice({
+          type: "info",
+          message: "Email is not verified yet. Please check your inbox and click the confirmation link."
+        });
+      }
+    } catch (err) {
+      setStatusNotice({
+        type: "error",
+        message: err.message || "Failed to check verification status."
+      });
+    } finally {
+      setIsCheckingVerification(false);
+    }
+  };
+
+  const handleResendEmail = async () => {
+    if (resendCooldown > 0 || isResending) return;
+    setIsResending(true);
+    setStatusNotice(null);
+    try {
+      await sendVerificationEmail();
+      setResendCooldown(60);
+      setStatusNotice({
+        type: "success",
+        message: `Verification link re-sent to ${user.email}. Check your inbox and spam folder.`
+      });
+    } catch (err) {
+      setStatusNotice({
+        type: "error",
+        message: err.message || "Failed to dispatch verification email. Please try again shortly."
+      });
+    } finally {
+      setIsResending(false);
+    }
+  };
 
   const handleProfileCreated = async (newProfile) => {
-    if (!user) {
+    if (!user || !isEmailVerified) {
       openAuth("login");
       return;
     }
@@ -93,7 +156,7 @@ export default function Home() {
   };
 
   const handleProfileDeleted = async (profileId) => {
-    if (user) {
+    if (user && isEmailVerified) {
       try {
         await deleteUserProfile(user.uid, profileId);
       } catch (err) {
@@ -118,6 +181,7 @@ export default function Home() {
         activeProfileId={activeProfileId}
         setActiveProfileId={setActiveProfileId}
         onOpenAuth={() => openAuth("login")}
+        isEmailVerified={isEmailVerified}
       />
 
       <main style={{ flex: 1, paddingBottom: "40px" }}>
@@ -209,6 +273,120 @@ export default function Home() {
                   }}
                 >
                   Create New Account
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : !isEmailVerified ? (
+          <div style={{
+            maxWidth: "680px",
+            margin: "60px auto 0",
+            padding: "0 24px"
+          }}>
+            <div className="hud-panel" style={{
+              padding: "36px 32px",
+              textAlign: "center",
+              borderTop: "3px solid var(--accent-amber)"
+            }}>
+              <div style={{
+                width: "56px",
+                height: "56px",
+                borderRadius: "50%",
+                background: "rgba(245, 158, 11, 0.12)",
+                border: "1px solid rgba(245, 158, 11, 0.3)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                margin: "0 auto 20px",
+                color: "var(--accent-amber)"
+              }}>
+                <Mail size={26} />
+              </div>
+
+              <div className="mono-tag" style={{
+                fontSize: "0.7rem",
+                color: "var(--accent-amber)",
+                background: "rgba(245, 158, 11, 0.1)",
+                padding: "3px 8px",
+                borderRadius: "3px",
+                display: "inline-block",
+                marginBottom: "12px"
+              }}>
+                SECURITY PROTOCOL: VERIFICATION REQUIRED
+              </div>
+
+              <h2 style={{ fontSize: "1.35rem", fontWeight: 700, letterSpacing: "-0.01em", color: "#f8fafc", marginBottom: "10px" }}>
+                Verify Your Email Address
+              </h2>
+              <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", lineHeight: 1.6, maxWidth: "520px", margin: "0 auto 20px" }}>
+                A verification link was dispatched to <strong>{user.email}</strong> during account registration. For data privacy and to prevent identity spoofing or evasion attacks, biometric matching operations and profile vaults are locked until this email address is verified.
+              </p>
+
+              {statusNotice && (
+                <div style={{
+                  padding: "10px 14px",
+                  background: statusNotice.type === "success" ? "rgba(16, 185, 129, 0.12)" : statusNotice.type === "error" ? "rgba(244, 63, 94, 0.12)" : "rgba(6, 182, 212, 0.12)",
+                  border: `1px solid ${statusNotice.type === "success" ? "rgba(16, 185, 129, 0.3)" : statusNotice.type === "error" ? "rgba(244, 63, 94, 0.3)" : "rgba(6, 182, 212, 0.3)"}`,
+                  borderRadius: "4px",
+                  fontSize: "0.8rem",
+                  color: statusNotice.type === "success" ? "#6ee7b7" : statusNotice.type === "error" ? "#fca5a5" : "#38bdf8",
+                  maxWidth: "520px",
+                  margin: "0 auto 24px"
+                }}>
+                  {statusNotice.message}
+                </div>
+              )}
+
+              <div style={{ display: "flex", justifyContent: "center", gap: "12px", flexWrap: "wrap" }}>
+                <button
+                  onClick={handleCheckVerification}
+                  disabled={isCheckingVerification}
+                  style={{
+                    padding: "10px 20px",
+                    background: "var(--accent-cyan)",
+                    color: "#082f49",
+                    fontWeight: 600,
+                    borderRadius: "4px",
+                    fontSize: "0.82rem",
+                    fontFamily: "var(--font-mono)",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px"
+                  }}
+                >
+                  <RefreshCw size={14} style={{ animation: isCheckingVerification ? "spin 0.8s linear infinite" : "none" }} />
+                  {isCheckingVerification ? "Checking Status..." : "Check Verification Status"}
+                </button>
+
+                <button
+                  onClick={handleResendEmail}
+                  disabled={resendCooldown > 0 || isResending}
+                  style={{
+                    padding: "10px 20px",
+                    background: "rgba(255, 255, 255, 0.06)",
+                    border: "1px solid var(--border-medium)",
+                    color: resendCooldown > 0 ? "var(--text-muted)" : "var(--text-primary)",
+                    borderRadius: "4px",
+                    fontSize: "0.82rem",
+                    fontFamily: "var(--font-mono)",
+                    cursor: resendCooldown > 0 ? "not-allowed" : "pointer"
+                  }}
+                >
+                  {resendCooldown > 0 ? `Resend Available in ${resendCooldown}s` : isResending ? "Sending..." : "Resend Verification Email"}
+                </button>
+
+                <button
+                  onClick={logout}
+                  style={{
+                    padding: "10px 16px",
+                    background: "transparent",
+                    border: "1px solid var(--border-subtle)",
+                    color: "var(--text-muted)",
+                    borderRadius: "4px",
+                    fontSize: "0.82rem"
+                  }}
+                >
+                  Sign Out
                 </button>
               </div>
             </div>

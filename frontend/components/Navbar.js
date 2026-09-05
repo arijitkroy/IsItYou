@@ -10,6 +10,7 @@ export default function Navbar({
   activeProfileId,
   setActiveProfileId,
   onOpenAuth,
+  isEmailVerified = false,
 }) {
   const { user, logout } = useAuth();
   const activeProfile = profiles.find((p) => p.id === activeProfileId);
@@ -84,7 +85,8 @@ export default function Navbar({
           padding: "3px"
         }}>
           <button
-            onClick={() => setActiveTab("verify")}
+            onClick={() => isEmailVerified && setActiveTab("verify")}
+            disabled={user && !isEmailVerified}
             style={{
               display: "flex",
               alignItems: "center",
@@ -97,14 +99,17 @@ export default function Navbar({
               background: activeTab === "verify" ? "rgba(6, 182, 212, 0.15)" : "transparent",
               color: activeTab === "verify" ? "#38bdf8" : "var(--text-secondary)",
               border: activeTab === "verify" ? "1px solid rgba(6, 182, 212, 0.4)" : "1px solid transparent",
-              transition: "all 0.15s ease"
+              transition: "all 0.15s ease",
+              opacity: user && !isEmailVerified ? 0.45 : 1,
+              cursor: user && !isEmailVerified ? "not-allowed" : "pointer"
             }}
           >
             <Search size={15} />
             Verification HUD
           </button>
           <button
-            onClick={() => setActiveTab("enroll")}
+            onClick={() => isEmailVerified && setActiveTab("enroll")}
+            disabled={user && !isEmailVerified}
             style={{
               display: "flex",
               alignItems: "center",
@@ -117,7 +122,9 @@ export default function Navbar({
               background: activeTab === "enroll" ? "rgba(16, 185, 129, 0.15)" : "transparent",
               color: activeTab === "enroll" ? "#34d399" : "var(--text-secondary)",
               border: activeTab === "enroll" ? "1px solid rgba(16, 185, 129, 0.4)" : "1px solid transparent",
-              transition: "all 0.15s ease"
+              transition: "all 0.15s ease",
+              opacity: user && !isEmailVerified ? 0.45 : 1,
+              cursor: user && !isEmailVerified ? "not-allowed" : "pointer"
             }}
           >
             <UserCheck size={15} />
@@ -186,13 +193,31 @@ export default function Navbar({
               display: "flex",
               alignItems: "center",
               gap: "8px",
-              background: "rgba(16, 185, 129, 0.08)",
-              border: "1px solid rgba(16, 185, 129, 0.3)",
+              background: isEmailVerified ? "rgba(16, 185, 129, 0.08)" : "rgba(245, 158, 11, 0.08)",
+              border: `1px solid ${isEmailVerified ? "rgba(16, 185, 129, 0.3)" : "rgba(245, 158, 11, 0.3)"}`,
               padding: "4px 8px 4px 10px",
               borderRadius: "4px"
             }}>
-              <span className="mono-tag" style={{ fontSize: "0.72rem", color: "#34d399", maxWidth: "140px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              <span className="mono-tag" style={{
+                fontSize: "0.72rem",
+                color: isEmailVerified ? "#34d399" : "#f59e0b",
+                maxWidth: "140px",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap"
+              }}>
                 {user.email}
+              </span>
+              <span style={{
+                fontSize: "0.6rem",
+                fontFamily: "var(--font-mono)",
+                padding: "1px 4px",
+                borderRadius: "2px",
+                fontWeight: 700,
+                background: isEmailVerified ? "rgba(16, 185, 129, 0.2)" : "rgba(245, 158, 11, 0.2)",
+                color: isEmailVerified ? "#34d399" : "#f59e0b"
+              }}>
+                {isEmailVerified ? "VERIFIED" : "UNVERIFIED"}
               </span>
               <button
                 onClick={logout}
