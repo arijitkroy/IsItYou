@@ -13,11 +13,12 @@ import {
 import { useAuth } from "../context/AuthContext";
 
 export default function EnrollmentView({
-  profiles,
+  profiles = [],
   onProfileCreated,
   onProfileDeleted,
   activeProfileId,
   setActiveProfileId,
+  onNavigateToVerify,
 }) {
   const { user } = useAuth();
   const [friendName, setFriendName] = useState("");
@@ -140,8 +141,9 @@ export default function EnrollmentView({
           {successData && (
             <div style={{
               display: "flex",
-              alignItems: "flex-start",
-              gap: "10px",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: "12px",
               padding: "12px 16px",
               background: "rgba(16, 185, 129, 0.12)",
               border: "1px solid rgba(16, 185, 129, 0.4)",
@@ -150,11 +152,33 @@ export default function EnrollmentView({
               fontSize: "0.82rem",
               marginBottom: "20px"
             }}>
-              <CheckCircle size={18} style={{ flexShrink: 0, marginTop: "1px" }} />
-              <div>
-                <strong style={{ display: "block", marginBottom: "2px" }}>Biometric Model Calibrated</strong>
-                <span>Enrolled <strong>{successData.name}</strong> with {successData.sample_count} verified reference faces. Ready for identification.</span>
+              <div style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}>
+                <CheckCircle size={18} style={{ flexShrink: 0, marginTop: "1px" }} />
+                <div>
+                  <strong style={{ display: "block", marginBottom: "2px" }}>Biometric Model Calibrated</strong>
+                  <span>Enrolled <strong>{successData.name}</strong> with {successData.sample_count} verified reference faces. Listed in your enrolled profiles.</span>
+                </div>
               </div>
+              {onNavigateToVerify && (
+                <button
+                  type="button"
+                  onClick={onNavigateToVerify}
+                  style={{
+                    padding: "6px 12px",
+                    background: "rgba(16, 185, 129, 0.25)",
+                    border: "1px solid rgba(16, 185, 129, 0.5)",
+                    color: "#6ee7b7",
+                    borderRadius: "4px",
+                    fontSize: "0.76rem",
+                    fontFamily: "var(--font-mono)",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    whiteSpace: "nowrap"
+                  }}
+                >
+                  Verify Now &rarr;
+                </button>
+              )}
             </div>
           )}
 
@@ -332,7 +356,7 @@ export default function EnrollmentView({
             }}>
               <p>No friend profiles enrolled.</p>
               <p style={{ marginTop: "6px", fontSize: "0.74rem" }}>
-                Upload at least 10 images or click &quot;Load 12-Photo Demo&quot; to initialize.
+                Upload at least 10 reference facial photographs or a compressed archive (.ZIP, .7Z, .RAR) to enroll a subject.
               </p>
             </div>
           ) : (

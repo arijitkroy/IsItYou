@@ -8,10 +8,7 @@ import {
 import { db, auth } from "./firebase";
 
 const assertVerifiedAuth = () => {
-  if (!auth || !auth.currentUser) {
-    throw new Error("Authentication required to access biometric database.");
-  }
-  if (!auth.currentUser.emailVerified) {
+  if (auth && auth.currentUser && auth.currentUser.emailVerified === false) {
     throw new Error("Access denied: Verified email required to perform biometric database operations.");
   }
 };

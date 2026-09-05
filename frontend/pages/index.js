@@ -43,20 +43,46 @@ export default function Home() {
       return;
     }
 
+    let loaded = [];
     try {
       const firestoreProfiles = await getUserProfiles(user.uid);
-      setProfiles(firestoreProfiles || []);
       if (firestoreProfiles && firestoreProfiles.length > 0) {
-        if (!activeProfileId || !firestoreProfiles.some((p) => p.id === activeProfileId)) {
-          setActiveProfileId(firestoreProfiles[0].id);
-        }
-      } else {
-        setActiveProfileId(null);
+        loaded = firestoreProfiles;
       }
     } catch (err) {
-      setProfiles([]);
-      setActiveProfileId(null);
+      console.error("Firestore get profiles error:", err);
     }
+
+    if (loaded.length === 0) {
+      try {
+        const token = await user.getIdToken();
+        const resp = await fetch("/api/profiles", {
+          headers: token ? { Authorization: `Bearer ${token}` } : {}
+        });
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data.profiles && data.profiles.length > 0) {
+            loaded = data.profiles;
+            for (const bp of data.profiles) {
+              saveUserProfile(user.uid, bp).catch(() => {});
+            }
+          }
+        }
+      } catch (e) {}
+    }
+
+    setProfiles((prev) => {
+      const map = new Map();
+      loaded.forEach((p) => map.set(p.id, p));
+      prev.forEach((p) => {
+        if (!map.has(p.id)) map.set(p.id, p);
+      });
+      const merged = Array.from(map.values());
+      if (merged.length > 0 && (!activeProfileId || !merged.some((p) => p.id === activeProfileId))) {
+        setActiveProfileId(merged[0].id);
+      }
+      return merged;
+    });
   };
 
   const fetchHealth = async () => {
@@ -136,12 +162,19 @@ export default function Home() {
     }
 
     if (newProfile && (newProfile.profile_id || newProfile.id)) {
+      const profileToSave = {
+        ...newProfile,
+        id: newProfile.profile_id || newProfile.id,
+        user_id: user.uid
+      };
+
+      setProfiles((prev) => {
+        const filtered = prev.filter((p) => p.id !== profileToSave.id);
+        return [profileToSave, ...filtered];
+      });
+      setActiveProfileId(profileToSave.id);
+
       try {
-        const profileToSave = {
-          ...newProfile,
-          id: newProfile.profile_id || newProfile.id,
-          user_id: user.uid
-        };
         await saveUserProfile(user.uid, profileToSave);
       } catch (err) {
         console.error("Failed saving profile to Firestore:", err);
@@ -149,10 +182,6 @@ export default function Home() {
     }
 
     await fetchProfiles();
-    if (newProfile && (newProfile.profile_id || newProfile.id || newProfile.demo_profile_id)) {
-      setActiveProfileId(newProfile.profile_id || newProfile.id || newProfile.demo_profile_id);
-    }
-    setActiveTab("verify");
   };
 
   const handleProfileDeleted = async (profileId) => {
@@ -405,6 +434,7 @@ export default function Home() {
             onProfileDeleted={handleProfileDeleted}
             activeProfileId={activeProfileId}
             setActiveProfileId={setActiveProfileId}
+            onNavigateToVerify={() => setActiveTab("verify")}
           />
         )}
       </main>
