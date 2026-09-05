@@ -103,7 +103,8 @@ Is-It-You/
 |   |   |-- archive_extractor.py    # Unpackaging for ZIP, 7Z, and RAR archives
 |   |   `-- sample_demo_loader.py   # Seed dataset generator for immediate evaluation
 |   |-- main.py                     # FastAPI routes and middleware
-|   `-- requirements.txt            # Python dependencies
+|   |-- requirements.txt            # Python dependencies
+|   `-- run_backend.py              # Standalone backend server launcher
 |-- frontend/
 |   |-- components/
 |   |   |-- EnrollmentView.js       # File and archive drop zone, gallery preview, submit form
@@ -119,7 +120,6 @@ Is-It-You/
 |   |-- next.config.js              # Next.js reverse proxy configuration
 |   `-- package.json                # Frontend dependencies and npm scripts
 |-- run.py                          # Unified launcher for frontend and backend
-|-- run_backend.py                  # Standalone backend server launcher
 `-- README.md                       # Project documentation
 ```
 
@@ -164,7 +164,7 @@ pip install -r backend/requirements.txt
 To run only the backend:
 
 ```bash
-python run_backend.py
+python backend/run_backend.py
 ```
 
 The API service will initialize at `http://127.0.0.1:8000`. Interactive API documentation is available at `http://127.0.0.1:8000/docs`.
