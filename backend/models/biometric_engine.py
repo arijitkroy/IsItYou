@@ -160,17 +160,10 @@ class BiometricEngine:
         self.profiles = self._load_profiles()
 
     def _load_profiles(self):
-        if os.path.exists(PROFILES_FILE):
-            try:
-                with open(PROFILES_FILE, "r", encoding="utf-8") as f:
-                    return json.load(f)
-            except Exception:
-                return {}
         return {}
 
     def _save_profiles(self):
-        with open(PROFILES_FILE, "w", encoding="utf-8") as f:
-            json.dump(self.profiles, f, indent=2)
+        pass
 
     def extract_embedding_from_tensor(self, face_tensor):
         with torch.no_grad():

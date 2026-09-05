@@ -50,3 +50,7 @@ Thumbs.db
 
 # OS / Misc
 *.log
+
+# Local profile cache
+backend/data/profiles.json
+backend/data/*.json

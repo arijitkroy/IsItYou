@@ -13,15 +13,22 @@ import {
 import { useAuth } from "../context/AuthContext";
 import { getFirebaseConfig, saveCustomFirebaseConfig, clearCustomFirebaseConfig } from "../lib/firebase";
 
-export default function AuthModal({ isOpen, onClose }) {
+export default function AuthModal({ isOpen, onClose, initialMode = "login" }) {
   const { login, signup, isConfigured } = useAuth();
-  const [activeMode, setActiveMode] = useState(isConfigured ? "login" : "config");
+  const [activeMode, setActiveMode] = useState(initialMode || (isConfigured ? "login" : "config"));
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  React.useEffect(() => {
+    if (isOpen && initialMode) {
+      setActiveMode(initialMode);
+      setErrorMessage("");
+    }
+  }, [isOpen, initialMode]);
 
   const initialConfig = getFirebaseConfig();
   const [configForm, setConfigForm] = useState({

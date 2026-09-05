@@ -7,40 +7,39 @@ import { useAuth } from "../context/AuthContext";
 import { getUserProfiles, saveUserProfile, deleteUserProfile } from "../lib/firestoreService";
 
 export default function Home() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const [activeTab, setActiveTab] = useState("verify");
   const [profiles, setProfiles] = useState([]);
   const [activeProfileId, setActiveProfileId] = useState(null);
   const [backendStatus, setBackendStatus] = useState({ online: false, device: "CPU" });
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authModalInitialMode, setAuthModalInitialMode] = useState("login");
+
+  const openAuth = (mode = "login") => {
+    setAuthModalInitialMode(mode);
+    setIsAuthModalOpen(true);
+  };
 
   const fetchProfiles = async () => {
-    if (user) {
-      try {
-        const firestoreProfiles = await getUserProfiles(user.uid);
-        if (firestoreProfiles && firestoreProfiles.length > 0) {
-          setProfiles(firestoreProfiles);
-          if (!activeProfileId || !firestoreProfiles.some((p) => p.id === activeProfileId)) {
-            setActiveProfileId(firestoreProfiles[firestoreProfiles.length - 1].id);
-          }
-          return;
-        }
-      } catch (err) {
-        // Fallback to local
-      }
+    if (!user) {
+      setProfiles([]);
+      setActiveProfileId(null);
+      return;
     }
 
     try {
-      const resp = await fetch("/api/profiles");
-      if (resp.ok) {
-        const data = await resp.json();
-        setProfiles(data.profiles || []);
-        if (data.profiles && data.profiles.length > 0 && !activeProfileId) {
-          setActiveProfileId(data.profiles[data.profiles.length - 1].id);
+      const firestoreProfiles = await getUserProfiles(user.uid);
+      setProfiles(firestoreProfiles || []);
+      if (firestoreProfiles && firestoreProfiles.length > 0) {
+        if (!activeProfileId || !firestoreProfiles.some((p) => p.id === activeProfileId)) {
+          setActiveProfileId(firestoreProfiles[0].id);
         }
+      } else {
+        setActiveProfileId(null);
       }
     } catch (err) {
-      // Backend not reached
+      setProfiles([]);
+      setActiveProfileId(null);
     }
   };
 
@@ -68,7 +67,12 @@ export default function Home() {
   }, [user]);
 
   const handleProfileCreated = async (newProfile) => {
-    if (user && newProfile && (newProfile.profile_id || newProfile.id)) {
+    if (!user) {
+      openAuth("login");
+      return;
+    }
+
+    if (newProfile && (newProfile.profile_id || newProfile.id)) {
       try {
         const profileToSave = {
           ...newProfile,
@@ -77,7 +81,7 @@ export default function Home() {
         };
         await saveUserProfile(user.uid, profileToSave);
       } catch (err) {
-        // Error saving to firestore
+        console.error("Failed saving profile to Firestore:", err);
       }
     }
 
@@ -93,14 +97,8 @@ export default function Home() {
       try {
         await deleteUserProfile(user.uid, profileId);
       } catch (err) {
-        // Error deleting from firestore
+        console.error("Failed deleting profile from Firestore:", err);
       }
-    }
-
-    try {
-      await fetch(`/api/profiles/${profileId}`, { method: "DELETE" });
-    } catch (err) {
-      // Ignore
     }
 
     setProfiles((prev) => prev.filter((p) => p.id !== profileId));
@@ -119,11 +117,103 @@ export default function Home() {
         profiles={profiles}
         activeProfileId={activeProfileId}
         setActiveProfileId={setActiveProfileId}
-        onOpenAuth={() => setIsAuthModalOpen(true)}
+        onOpenAuth={() => openAuth("login")}
       />
 
       <main style={{ flex: 1, paddingBottom: "40px" }}>
-        {activeTab === "verify" ? (
+        {loading ? (
+          <div style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            minHeight: "450px",
+            gap: "14px"
+          }}>
+            <div style={{
+              width: "36px",
+              height: "36px",
+              border: "2px solid rgba(6, 182, 212, 0.2)",
+              borderTopColor: "var(--accent-cyan)",
+              borderRadius: "50%",
+              animation: "spin 0.8s linear infinite"
+            }} />
+            <span className="mono-tag" style={{ color: "var(--accent-cyan)", fontSize: "0.8rem" }}>
+              Connecting to Firestore Vault...
+            </span>
+            <style jsx>{`
+              @keyframes spin { to { transform: rotate(360deg); } }
+            `}</style>
+          </div>
+        ) : !user ? (
+          <div style={{
+            maxWidth: "680px",
+            margin: "60px auto 0",
+            padding: "0 24px"
+          }}>
+            <div className="hud-panel" style={{
+              padding: "36px 32px",
+              textAlign: "center",
+              borderTop: "3px solid var(--accent-cyan)"
+            }}>
+              <div style={{
+                width: "56px",
+                height: "56px",
+                borderRadius: "50%",
+                background: "rgba(6, 182, 212, 0.12)",
+                border: "1px solid rgba(6, 182, 212, 0.3)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                margin: "0 auto 20px",
+                color: "var(--accent-cyan)"
+              }}>
+                <span style={{ fontSize: "1.4rem", fontFamily: "var(--font-mono)", fontWeight: 700 }}>
+                  ID
+                </span>
+              </div>
+
+              <h2 style={{ fontSize: "1.35rem", fontWeight: 700, letterSpacing: "-0.01em", color: "#f8fafc", marginBottom: "10px" }}>
+                Authentication Required
+              </h2>
+              <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", lineHeight: 1.6, marginBottom: "28px", maxWidth: "520px", margin: "0 auto 28px" }}>
+                To ensure privacy and biometric data isolation, friend profiles and 512D neural centroids are stored strictly in your personal Firebase Firestore vault. Please sign in or register to access the identification console.
+              </p>
+
+              <div style={{ display: "flex", justifyContent: "center", gap: "12px", flexWrap: "wrap" }}>
+                <button
+                  onClick={() => openAuth("login")}
+                  style={{
+                    padding: "10px 24px",
+                    background: "var(--accent-cyan)",
+                    color: "#082f49",
+                    fontWeight: 600,
+                    borderRadius: "4px",
+                    fontSize: "0.84rem",
+                    fontFamily: "var(--font-mono)"
+                  }}
+                >
+                  Sign In to Access Vault
+                </button>
+                <button
+                  onClick={() => openAuth("signup")}
+                  style={{
+                    padding: "10px 24px",
+                    background: "rgba(16, 185, 129, 0.12)",
+                    border: "1px solid rgba(16, 185, 129, 0.4)",
+                    color: "#34d399",
+                    fontWeight: 600,
+                    borderRadius: "4px",
+                    fontSize: "0.84rem",
+                    fontFamily: "var(--font-mono)"
+                  }}
+                >
+                  Create New Account
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : activeTab === "verify" ? (
           <VerificationView
             profiles={profiles}
             activeProfileId={activeProfileId}
@@ -143,6 +233,7 @@ export default function Home() {
 
       <AuthModal
         isOpen={isAuthModalOpen}
+        initialMode={authModalInitialMode}
         onClose={() => setIsAuthModalOpen(false)}
       />
 
