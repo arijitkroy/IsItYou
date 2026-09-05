@@ -6,11 +6,9 @@ import {
   AlertTriangle, 
   UserPlus, 
   Trash2, 
-  Sparkles, 
-  Download,
-  Info,
-  Layers,
-  Image as ImageIcon
+  Info, 
+  Layers, 
+  Image as ImageIcon 
 } from "lucide-react";
 
 export default function EnrollmentView({
@@ -88,25 +86,6 @@ export default function EnrollmentView({
     }
   };
 
-  const handleLoadDemo = async () => {
-    setIsSubmitting(true);
-    setErrorMessage("");
-    try {
-      const resp = await fetch("/api/sample-demo", { method: "POST" });
-      const data = await resp.json();
-      if (!resp.ok) throw new Error(data.detail || "Demo loading failed.");
-      setSuccessData({
-        name: data.friend_name,
-        sample_count: data.enrolled_count,
-        status: "success"
-      });
-      onProfileCreated(data);
-    } catch (err) {
-      setErrorMessage(err.message);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   return (
     <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "32px 24px" }}>
@@ -117,36 +96,13 @@ export default function EnrollmentView({
         alignItems: "start"
       }}>
         <div className="hud-panel" style={{ padding: "24px" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
-            <div>
-              <h2 style={{ fontSize: "1.2rem", fontWeight: 700, letterSpacing: "-0.01em" }}>
-                Enroll Subject Profile
-              </h2>
-              <p style={{ fontSize: "0.82rem", color: "var(--text-secondary)", marginTop: "4px" }}>
-                Provide at least 10 high-resolution facial images or a single compressed archive.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={handleLoadDemo}
-              disabled={isSubmitting}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                padding: "8px 14px",
-                borderRadius: "4px",
-                background: "rgba(6, 182, 212, 0.12)",
-                border: "1px solid rgba(6, 182, 212, 0.4)",
-                color: "#38bdf8",
-                fontSize: "0.76rem",
-                fontFamily: "var(--font-mono)",
-                fontWeight: 600
-              }}
-            >
-              <Sparkles size={14} />
-              Load 12-Photo Demo
-            </button>
+          <div style={{ marginBottom: "20px" }}>
+            <h2 style={{ fontSize: "1.2rem", fontWeight: 700, letterSpacing: "-0.01em" }}>
+              Enroll Subject Profile
+            </h2>
+            <p style={{ fontSize: "0.82rem", color: "var(--text-secondary)", marginTop: "4px" }}>
+              Provide at least 10 high-resolution facial images or a single compressed archive.
+            </p>
           </div>
 
           {errorMessage && (
@@ -223,39 +179,17 @@ export default function EnrollmentView({
             </div>
 
             <div style={{ marginBottom: "20px" }}>
-              <div style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                marginBottom: "8px"
+              <label style={{
+                display: "block",
+                fontFamily: "var(--font-mono)",
+                fontSize: "0.75rem",
+                color: "var(--text-secondary)",
+                marginBottom: "8px",
+                textTransform: "uppercase",
+                letterSpacing: "0.05em"
               }}>
-                <label style={{
-                  fontFamily: "var(--font-mono)",
-                  fontSize: "0.75rem",
-                  color: "var(--text-secondary)",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.05em"
-                }}>
-                  Reference Images (&ge;10) or Archive (.ZIP, .7Z, .RAR)
-                </label>
-
-                <a
-                  href="/api/sample-demo/archive"
-                  download="alex_carter_12_photos.zip"
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "5px",
-                    fontSize: "0.72rem",
-                    color: "var(--accent-cyan)",
-                    textDecoration: "none",
-                    fontFamily: "var(--font-mono)"
-                  }}
-                >
-                  <Download size={12} />
-                  Download Sample ZIP
-                </a>
-              </div>
+                Reference Images (&ge;10) or Archive (.ZIP, .7Z, .RAR)
+              </label>
 
               <div
                 onClick={() => fileInputRef.current && fileInputRef.current.click()}
