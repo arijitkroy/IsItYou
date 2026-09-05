@@ -49,6 +49,17 @@ export default function VerificationView({
     if (targetId) {
       formData.append("profile_id", targetId);
     }
+    if (activeProfile && activeProfile.centroid) {
+      formData.append(
+        "profile_data",
+        JSON.stringify({
+          id: activeProfile.id,
+          name: activeProfile.name,
+          centroid: activeProfile.centroid,
+          threshold: activeProfile.threshold || 0.62,
+        })
+      );
+    }
 
     try {
       const resp = await fetch("/api/identify", {

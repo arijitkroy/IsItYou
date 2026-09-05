@@ -49,6 +49,8 @@ The system follows a decoupled client-server architecture:
 
 ### Frontend
 - Framework: Next.js (Pages Router, React 18)
+- Authentication: Firebase Authentication (Email / Password)
+- Cloud Database: Firebase Firestore (`users/{uid}/profiles/{profileId}`)
 - Styling: Custom Cybernetic Dark Theme (Vanilla CSS, zero third-party utility abstractions)
 - Icons: Lucide React
 - Canvas Engine: Native HTML5 2D Canvas with device-pixel-ratio scaling and multi-layer compositing
@@ -107,16 +109,23 @@ Is-It-You/
 |   `-- run_backend.py              # Standalone backend server launcher
 |-- frontend/
 |   |-- components/
+|   |   |-- AuthModal.js            # Email/Password sign in, registration, and config modal
 |   |   |-- EnrollmentView.js       # File and archive drop zone, gallery preview, submit form
 |   |   |-- HudCanvas.js            # HTML5 Canvas multi-layered rendering engine
 |   |   |-- HudControls.js          # Interactive HUD layer toggle switches
 |   |   |-- Navbar.js               # Header navigation, system status, active profile selector
 |   |   `-- VerificationView.js     # Query upload, sample loader, and forensic telemetry sidebar
+|   |-- context/
+|   |   `-- AuthContext.js          # Firebase Auth state provider and session hooks
+|   |-- lib/
+|   |   |-- firebase.js             # Firebase client SDK initialization and config helpers
+|   |   `-- firestoreService.js     # User-scoped profile persistence and retrieval
 |   |-- pages/
-|   |   |-- _app.js                 # Global styles and metadata wrapper
+|   |   |-- _app.js                 # Global styles and metadata wrapper with AuthProvider
 |   |   `-- index.js                # Root application container and view switcher
 |   |-- styles/
 |   |   `-- globals.css             # Cybernetic dark theme, typography, and UI tokens
+|   |-- .env.local.example          # Firebase environment variables template
 |   |-- next.config.js              # Next.js reverse proxy configuration
 |   `-- package.json                # Frontend dependencies and npm scripts
 |-- run.py                          # Unified launcher for frontend and backend
@@ -178,6 +187,42 @@ cd frontend
 npm install
 ```
 
+### 3. Firebase Configuration (Authentication & Firestore)
+
+Create a `.env.local` file in the `frontend/` directory (or use the built-in Config tab in the web UI):
+
+```bash
+cp frontend/.env.local.example frontend/.env.local
+```
+
+Populate the values from your Firebase Project Console:
+
+```env
+NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
+```
+
+#### Firestore Security Rules
+
+Configure the following Firestore security rules to ensure user isolation:
+
+```javascript
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{userId}/profiles/{profileId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}
+```
+
+### 4. Development Server
+
 Start the Next.js development server:
 
 ```bash
@@ -186,7 +231,7 @@ npm run dev
 
 Open `http://localhost:3000` in your web browser.
 
-### 3. Production Build
+### 5. Production Build
 
 To verify and create an optimized production build for the frontend:
 

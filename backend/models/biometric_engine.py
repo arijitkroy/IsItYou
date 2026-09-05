@@ -264,20 +264,25 @@ class BiometricEngine:
         return {
             "status": "success",
             "profile_id": profile_id,
+            "id": profile_id,
             "name": friend_name.strip(),
             "sample_count": len(valid_embeddings),
             "avg_similarity": round(avg_similarity, 3),
             "threshold": round(threshold, 3),
+            "variance": round(variance, 4),
+            "centroid": mean_centroid.tolist(),
             "thumbnails": thumbnails[:12]
         }
 
-    def identify(self, query_img_pil: Image.Image, target_profile_id: str = None):
+    def identify(self, query_img_pil: Image.Image, target_profile_id: str = None, custom_target_profile: dict = None):
         img_w, img_h = query_img_pil.size
 
         boxes, probs, keypoints_list = self.mtcnn.detect(query_img_pil, landmarks=True)
 
         target_profile = None
-        if target_profile_id:
+        if custom_target_profile and isinstance(custom_target_profile, dict) and "centroid" in custom_target_profile:
+            target_profile = custom_target_profile
+        elif target_profile_id:
             cleaned_id = str(target_profile_id).strip()
             if cleaned_id and cleaned_id.lower() not in ("null", "undefined", "none", ""):
                 if cleaned_id in self.profiles:

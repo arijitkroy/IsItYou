@@ -50,6 +50,7 @@ def get_profiles():
             "avg_similarity": p.get("avg_similarity", 0.0),
             "variance": p.get("variance", 0.0),
             "thumbnails": p.get("thumbnails", []),
+            "centroid": p.get("centroid", []),
             "created_at": p.get("created_at", "")
         })
     return {"profiles": profile_list}
@@ -116,7 +117,8 @@ async def enroll_friend(
 @app.post("/api/identify")
 async def identify_face(
     file: UploadFile = File(...),
-    profile_id: Optional[str] = Form(None)
+    profile_id: Optional[str] = Form(None),
+    profile_data: Optional[str] = Form(None)
 ):
     filename = file.filename or ""
     if not is_image_extension(filename) and not file.content_type.startswith("image/"):
@@ -128,8 +130,16 @@ async def identify_face(
     except Exception:
         raise HTTPException(status_code=400, detail="Corrupted image file.")
 
+    custom_profile = None
+    if profile_data:
+        try:
+            import json as py_json
+            custom_profile = py_json.loads(profile_data)
+        except Exception:
+            pass
+
     try:
-        results = engine.identify(query_pil, target_profile_id=profile_id)
+        results = engine.identify(query_pil, target_profile_id=profile_id, custom_target_profile=custom_profile)
         return JSONResponse(status_code=200, content=results)
     except Exception as ex:
         raise HTTPException(status_code=500, detail=f"Identification error: {str(ex)}")

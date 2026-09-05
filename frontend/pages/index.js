@@ -2,14 +2,34 @@ import React, { useState, useEffect } from "react";
 import Navbar from "../components/Navbar";
 import VerificationView from "../components/VerificationView";
 import EnrollmentView from "../components/EnrollmentView";
+import AuthModal from "../components/AuthModal";
+import { useAuth } from "../context/AuthContext";
+import { getUserProfiles, saveUserProfile, deleteUserProfile } from "../lib/firestoreService";
 
 export default function Home() {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("verify");
   const [profiles, setProfiles] = useState([]);
   const [activeProfileId, setActiveProfileId] = useState(null);
   const [backendStatus, setBackendStatus] = useState({ online: false, device: "CPU" });
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   const fetchProfiles = async () => {
+    if (user) {
+      try {
+        const firestoreProfiles = await getUserProfiles(user.uid);
+        if (firestoreProfiles && firestoreProfiles.length > 0) {
+          setProfiles(firestoreProfiles);
+          if (!activeProfileId || !firestoreProfiles.some((p) => p.id === activeProfileId)) {
+            setActiveProfileId(firestoreProfiles[firestoreProfiles.length - 1].id);
+          }
+          return;
+        }
+      } catch (err) {
+        // Fallback to local
+      }
+    }
+
     try {
       const resp = await fetch("/api/profiles");
       if (resp.ok) {
@@ -45,28 +65,48 @@ export default function Home() {
       fetchHealth();
     }, 12000);
     return () => clearInterval(interval);
-  }, []);
+  }, [user]);
 
-  const handleProfileCreated = (newProfile) => {
-    fetchProfiles();
-    if (newProfile && (newProfile.profile_id || newProfile.demo_profile_id)) {
-      setActiveProfileId(newProfile.profile_id || newProfile.demo_profile_id);
+  const handleProfileCreated = async (newProfile) => {
+    if (user && newProfile && (newProfile.profile_id || newProfile.id)) {
+      try {
+        const profileToSave = {
+          ...newProfile,
+          id: newProfile.profile_id || newProfile.id,
+          user_id: user.uid
+        };
+        await saveUserProfile(user.uid, profileToSave);
+      } catch (err) {
+        // Error saving to firestore
+      }
+    }
+
+    await fetchProfiles();
+    if (newProfile && (newProfile.profile_id || newProfile.id || newProfile.demo_profile_id)) {
+      setActiveProfileId(newProfile.profile_id || newProfile.id || newProfile.demo_profile_id);
     }
     setActiveTab("verify");
   };
 
   const handleProfileDeleted = async (profileId) => {
-    try {
-      const resp = await fetch(`/api/profiles/${profileId}`, { method: "DELETE" });
-      if (resp.ok) {
-        setProfiles((prev) => prev.filter((p) => p.id !== profileId));
-        if (activeProfileId === profileId) {
-          const remaining = profiles.filter((p) => p.id !== profileId);
-          setActiveProfileId(remaining.length > 0 ? remaining[0].id : null);
-        }
+    if (user) {
+      try {
+        await deleteUserProfile(user.uid, profileId);
+      } catch (err) {
+        // Error deleting from firestore
       }
+    }
+
+    try {
+      await fetch(`/api/profiles/${profileId}`, { method: "DELETE" });
     } catch (err) {
       // Ignore
+    }
+
+    setProfiles((prev) => prev.filter((p) => p.id !== profileId));
+    if (activeProfileId === profileId) {
+      const remaining = profiles.filter((p) => p.id !== profileId);
+      setActiveProfileId(remaining.length > 0 ? remaining[0].id : null);
     }
   };
 
@@ -79,6 +119,7 @@ export default function Home() {
         profiles={profiles}
         activeProfileId={activeProfileId}
         setActiveProfileId={setActiveProfileId}
+        onOpenAuth={() => setIsAuthModalOpen(true)}
       />
 
       <main style={{ flex: 1, paddingBottom: "40px" }}>
@@ -100,6 +141,11 @@ export default function Home() {
         )}
       </main>
 
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+      />
+
       <footer style={{
         borderTop: "1px solid var(--border-subtle)",
         padding: "16px 24px",
@@ -119,7 +165,7 @@ export default function Home() {
         <div>
           <span>FACENET INCEPTION-RESNET-V1 (512D)</span>
           <span style={{ margin: "0 8px" }}>|</span>
-          <span>MEDIAPIPE TOPOLOGICAL MESH (468 PT)</span>
+          <span>FIREBASE AUTH & FIRESTORE CLOUD REPOSITORY</span>
         </div>
       </footer>
     </div>

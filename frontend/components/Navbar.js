@@ -1,5 +1,6 @@
 import React from "react";
-import { ShieldCheck, UserCheck, Search, Activity, Cpu, Users } from "lucide-react";
+import { ShieldCheck, UserCheck, Search, Activity, Cpu, Users, LogIn, LogOut, User } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
 
 export default function Navbar({
   activeTab,
@@ -8,7 +9,9 @@ export default function Navbar({
   profiles,
   activeProfileId,
   setActiveProfileId,
+  onOpenAuth,
 }) {
+  const { user, logout } = useAuth();
   const activeProfile = profiles.find((p) => p.id === activeProfileId);
 
   return (
@@ -177,6 +180,56 @@ export default function Navbar({
               {backendStatus.online ? `Core ${backendStatus.device || "Ready"}` : "Core Offline"}
             </span>
           </div>
+
+          {user ? (
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              background: "rgba(16, 185, 129, 0.08)",
+              border: "1px solid rgba(16, 185, 129, 0.3)",
+              padding: "4px 8px 4px 10px",
+              borderRadius: "4px"
+            }}>
+              <span className="mono-tag" style={{ fontSize: "0.72rem", color: "#34d399", maxWidth: "140px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {user.email}
+              </span>
+              <button
+                onClick={logout}
+                title="Sign Out"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  padding: "4px",
+                  color: "var(--text-muted)",
+                  borderRadius: "3px",
+                  transition: "color 0.15s ease"
+                }}
+              >
+                <LogOut size={13} />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={onOpenAuth}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                padding: "6px 12px",
+                borderRadius: "4px",
+                background: "rgba(6, 182, 212, 0.12)",
+                border: "1px solid rgba(6, 182, 212, 0.4)",
+                color: "#38bdf8",
+                fontSize: "0.76rem",
+                fontWeight: 600,
+                fontFamily: "var(--font-mono)"
+              }}
+            >
+              <LogIn size={13} />
+              Sign In
+            </button>
+          )}
         </div>
       </div>
     </header>
