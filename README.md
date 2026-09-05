@@ -93,9 +93,9 @@ The identification view features an interactive, toggleable canvas HUD with five
 
 ```
 Is-It-You/
+|-- api/
+|   `-- index.py                    # Vercel serverless Python entrypoint for FastAPI
 |-- backend/
-|   |-- data/
-|   |   `-- profiles.json           # Enrolled biometric profiles and gallery centroids
 |   |-- models/
 |   |   `-- biometric_engine.py     # MTCNN, FaceNet, topology builder, and metric engine
 |   |-- samples/
@@ -129,7 +129,9 @@ Is-It-You/
 |   |-- .env.local.example          # Firebase environment variables template
 |   |-- next.config.js              # Next.js reverse proxy configuration
 |   `-- package.json                # Frontend dependencies and npm scripts
+|-- requirements.txt                # Root requirements for Vercel Python serverless builder
 |-- run.py                          # Unified launcher for frontend and backend
+|-- vercel.json                     # Vercel monorepo routing and build configuration
 `-- README.md                       # Project documentation
 ```
 
@@ -243,6 +245,30 @@ cd frontend
 npm run build
 npm start
 ```
+
+### 6. Deploying to Vercel (Frontend + Backend)
+
+The project is preconfigured for full-stack deployment on Vercel using `vercel.json` and `api/index.py`:
+
+1. **Import Repository**: In the [Vercel Dashboard](https://vercel.com/new), select and import the `arijitkroy/IsItYou` repository.
+2. **Project Settings**:
+   - Leave **Root Directory** as `.` (repository root).
+   - Build configuration is handled automatically by `vercel.json`.
+3. **Configure Environment Variables**:
+   In the Vercel project settings (`Settings -> Environment Variables`), populate your Firebase credentials:
+   - `NEXT_PUBLIC_FIREBASE_API_KEY`
+   - `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`
+   - `NEXT_PUBLIC_FIREBASE_PROJECT_ID`
+   - `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`
+   - `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`
+   - `NEXT_PUBLIC_FIREBASE_APP_ID`
+4. **Deploy**:
+   Click **Deploy**. Vercel will compile the Next.js frontend with `@vercel/next` and initialize the FastAPI serverless functions under `api/index.py` using `@vercel/python`.
+
+#### Hybrid Backend Routing (Optional)
+If your workloads require dedicated GPU acceleration or longer execution times than standard serverless function limits, deploy the backend to a container host (e.g. Render, Railway, Fly.io, or GCP) and set:
+- `BACKEND_URL`: `https://your-backend-instance.onrender.com`
+Next.js will automatically proxy all `/api/*` calls to the specified backend URL without modifying client code.
 
 ## API Reference
 
