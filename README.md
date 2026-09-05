@@ -118,7 +118,8 @@ Is-It-You/
 |   |   `-- globals.css             # Cybernetic dark theme, typography, and UI tokens
 |   |-- next.config.js              # Next.js reverse proxy configuration
 |   `-- package.json                # Frontend dependencies and npm scripts
-|-- run_backend.py                  # Backend server launcher
+|-- run.py                          # Unified launcher for frontend and backend
+|-- run_backend.py                  # Standalone backend server launcher
 `-- README.md                       # Project documentation
 ```
 
@@ -129,7 +130,23 @@ Is-It-You/
 - Node.js 18.x or higher, with npm
 - CUDA-compatible GPU (optional, automatic CPU fallback supported)
 
-### 1. Backend Installation
+### Quick Start (Single Command)
+
+Once dependencies are installed, launch both the FastAPI backend and Next.js frontend simultaneously in a single console:
+
+```bash
+python run.py
+```
+
+- Frontend interface: `http://localhost:3000`
+- Backend API service: `http://127.0.0.1:8000`
+- Interactive API documentation: `http://127.0.0.1:8000/docs`
+
+Press `Ctrl+C` to cleanly terminate both services.
+
+### Individual Service Setup
+
+#### 1. Backend Installation
 
 Navigate to the project root and create a virtual environment:
 
@@ -144,7 +161,7 @@ Install Python dependencies:
 pip install -r backend/requirements.txt
 ```
 
-Launch the FastAPI backend server:
+To run only the backend:
 
 ```bash
 python run_backend.py
