@@ -93,8 +93,6 @@ The identification view features an interactive, toggleable canvas HUD with five
 
 ```
 Is-It-You/
-|-- api/
-|   `-- index.py                    # Vercel serverless Python entrypoint for FastAPI
 |-- backend/
 |   |-- models/
 |   |   `-- biometric_engine.py     # MTCNN, FaceNet, topology builder, and metric engine
@@ -127,11 +125,13 @@ Is-It-You/
 |   |-- styles/
 |   |   `-- globals.css             # Cybernetic dark theme, typography, and UI tokens
 |   |-- .env.local.example          # Firebase environment variables template
-|   |-- next.config.js              # Next.js reverse proxy configuration
+|   |-- Dockerfile                  # Frontend container build definition
+|   |-- next.config.js              # Next.js reverse proxy configuration with BACKEND_URL support
 |   `-- package.json                # Frontend dependencies and npm scripts
-|-- requirements.txt                # Root requirements for Vercel Python serverless builder
+|-- docker-compose.yml              # Local multi-service container orchestration
+|-- Dockerfile                      # Backend container build definition (Render, Railway, Fly.io, GCP)
 |-- run.py                          # Unified launcher for frontend and backend
-|-- vercel.json                     # Vercel monorepo routing and build configuration
+|-- vercel.json                     # Vercel configuration for Next.js frontend deployment
 `-- README.md                       # Project documentation
 ```
 
@@ -246,29 +246,51 @@ npm run build
 npm start
 ```
 
-### 6. Deploying to Vercel (Frontend + Backend)
+### 6. Cloud Deployment Architecture (Vercel Frontend + Container Backend)
 
-The project is preconfigured for full-stack deployment on Vercel using `vercel.json` and `api/index.py`:
+> [!NOTE]
+> Deep learning frameworks such as PyTorch, Torchvision, and FaceNet require substantial native binaries and runtime memory (~4.8 GB installed size). Vercel Serverless Functions enforce a strict **500 MB maximum bundle limit**, which prevents direct hosting of full neural network runtimes inside Vercel serverless functions.
+> 
+> The standard and recommended production architecture is:
+> - **Frontend**: Deployed on **Vercel** for optimal Next.js performance and global edge distribution.
+> - **Backend**: Deployed on a container host (**Render**, **Railway**, **Fly.io**, or **Google Cloud Run**) using the included `Dockerfile`.
+> - **Proxy Connection**: Next.js automatically routes `/api/*` requests to the container backend via the `BACKEND_URL` environment variable.
 
-1. **Import Repository**: In the [Vercel Dashboard](https://vercel.com/new), select and import the `arijitkroy/IsItYou` repository.
-2. **Project Settings**:
-   - Leave **Root Directory** as `.` (repository root).
-   - Build configuration is handled automatically by `vercel.json`.
-3. **Configure Environment Variables**:
-   In the Vercel project settings (`Settings -> Environment Variables`), populate your Firebase credentials:
+#### Step 1: Deploy Frontend on Vercel
+
+1. Go to the [Vercel Dashboard](https://vercel.com/new) and import the `arijitkroy/IsItYou` repository.
+2. In **Project Settings**:
+   - The included `vercel.json` automatically builds the Next.js frontend from `frontend/`.
+3. In **Environment Variables**, configure your Firebase keys:
    - `NEXT_PUBLIC_FIREBASE_API_KEY`
    - `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`
    - `NEXT_PUBLIC_FIREBASE_PROJECT_ID`
    - `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`
    - `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`
    - `NEXT_PUBLIC_FIREBASE_APP_ID`
-4. **Deploy**:
-   Click **Deploy**. Vercel will compile the Next.js frontend with `@vercel/next` and initialize the FastAPI serverless functions under `api/index.py` using `@vercel/python`.
+4. Click **Deploy**. The frontend will build and deploy cleanly.
 
-#### Hybrid Backend Routing (Optional)
-If your workloads require dedicated GPU acceleration or longer execution times than standard serverless function limits, deploy the backend to a container host (e.g. Render, Railway, Fly.io, or GCP) and set:
-- `BACKEND_URL`: `https://your-backend-instance.onrender.com`
-Next.js will automatically proxy all `/api/*` calls to the specified backend URL without modifying client code.
+#### Step 2: Deploy Backend (Render, Railway, or Fly.io)
+
+Using the included root `Dockerfile`, you can deploy the backend to any container host:
+
+- **Render**:
+  1. Create a new **Web Service** in [Render](https://dashboard.render.com/).
+  2. Connect `arijitkroy/IsItYou`.
+  3. Environment: **Docker** (uses the root `Dockerfile`).
+  4. Render assigns a public HTTPS URL: `https://is-it-you-backend.onrender.com`.
+
+- **Railway**:
+  1. Create a **New Project** in [Railway](https://railway.app/).
+  2. Deploy from GitHub Repo `arijitkroy/IsItYou` (automatically detects `Dockerfile`).
+  3. Railway assigns a public HTTPS URL: `https://is-it-you.up.railway.app`.
+
+#### Step 3: Link Backend to Vercel
+
+In your Vercel Project Settings (`Settings -> Environment Variables`), add:
+- `BACKEND_URL`: `https://your-backend-service.onrender.com`
+
+Next.js will automatically proxy all `/api/*` endpoints to your live container backend without changing any frontend code.
 
 ## API Reference
 
